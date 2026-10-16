@@ -1,0 +1,11 @@
+:root { --bg: #f5f6f8; --panel: #fff; --text: #1f2328; --muted: #6b7280; --border: #e5e7eb; --brand: #10b981; --soft: #ecfdf5; }
+html.dark { --bg: #0e1013; --panel: #171a20; --text: #e5e7eb; --muted: #9ca3af; --border: #2a2f39; --brand: #34d399; --soft: #0f2a20; }
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+button, select, input, textarea { font: inherit; color: inherit; }
+a { color: var(--brand); text-decoration: none; }
+.btn { border: 1px solid var(--border); background: var(--panel); border-radius: 8px; padding: 6px 12px; min-height: 36px; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+select, input[type=text] { border: 1px solid var(--border); background: var(--panel); border-radius: 8px; padding: 6px 8px; min-height: 36px; }

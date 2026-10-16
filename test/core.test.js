@@ -1,0 +1,105 @@
+import { describe, it, expect } from 'vitest'
+import { toWechat, toZhihu, toPreview, splitFrontMatter, highlightInline } from '../src/core/render.js'
+import { cleanMarkdown, spaceCjk } from '../src/core/clean.js'
+import { splitCards, weight } from '../src/core/cards.js'
+import { THEMES } from '../src/core/themes.js'
+
+const SAMPLE = `---
+title: 测试
+---
+# 标题
+
+正文 **加粗** 和 [链接](https://example.com)，还有 \`code\`。
+
+\`\`\`js
+function a() {
+  return 1
+}
+\`\`\`
+`
+
+describe('公众号', () => {
+  const html = toWechat(SAMPLE, 'emerald')
+  it('不含 class 和 <style>，全部内联样式', () => {
+    expect(html).not.toMatch(/class=/)
+    expect(html).not.toMatch(/<style/)
+    expect(html).toMatch(/<h1 style="[^"]+">标题<\/h1>/)
+    expect(html).toContain(THEMES.emerald.colors.primary)
+  })
+  it('去掉 front matter', () => expect(html).not.toContain('title: 测试'))
+  it('外链转成脚注', () => {
+    expect(html).not.toMatch(/<a href="https:\/\/example.com/)
+    expect(html).toContain('[1] https://example.com')
+  })
+  it('代码块高亮转成内联颜色，保留缩进和换行', () => {
+    expect(html).toMatch(/<span style="color:#[0-9a-f]{6};">function<\/span>/)
+    expect(html).toContain('&nbsp;&nbsp;')
+    expect(html).toContain('<br/>')
+  })
+  it('转义 HTML，防止注入', () => {
+    const h = toWechat('<script>alert(1)</script>\n\n`<b>`')
+    expect(h).not.toContain('<script>')
+    expect(h).toContain('&lt;b&gt;')
+  })
+  it('公众号文章链接保留为可点击', () => expect(toWechat('[看这](https://mp.weixin.qq.com/s/abc)')).toContain('<a href="https://mp.weixin.qq.com/s/abc"'))
+  it('切换主题颜色', () => expect(toWechat('## 二级', 'orange')).toContain(THEMES.orange.colors.primary))
+})
+
+describe('知乎', () => {
+  const html = toZhihu(SAMPLE)
+  it('输出干净的 HTML，不带内联样式', () => { expect(html).not.toMatch(/style=/); expect(html).toContain('<h1>标题</h1>') })
+  it('代码块保留语言标记', () => expect(html).toContain('<pre><code class="language-js">'))
+  it('链接保留', () => expect(html).toContain('href="https://example.com"'))
+})
+
+describe('预览', () => it('链接可点击', () => expect(toPreview(SAMPLE)).toMatch(/<a href="https:\/\/example.com" style=/)))
+
+describe('front matter / 高亮', () => {
+  it('解析 front matter', () => expect(splitFrontMatter(SAMPLE).meta.title).toBe('测试'))
+  it('未知语言不报错', () => expect(highlightInline('x = 1', 'nope-lang', {})).toContain('x'))
+})
+
+describe('掘金 / CSDN 规范化 Markdown', () => {
+  it('中英文之间加空格，代码和链接不动', () => {
+    expect(spaceCjk('使用Vue3开发')).toBe('使用 Vue3 开发')
+    expect(spaceCjk('这是**加粗**文字')).toBe('这是**加粗**文字')
+    expect(spaceCjk('提升50%性能')).toBe('提升 50% 性能')
+    expect(spaceCjk('运行`npm i`命令')).toBe('运行`npm i`命令')
+    expect(spaceCjk('见[文档](https://a.com/中文)')).toBe('见[文档](https://a.com/中文)')
+  })
+  it('标题补空格、列表统一、去 front matter、合并空行', () => {
+    const out = cleanMarkdown('---\na: 1\n---\n#标题\n* 项目\n\n\n\n正文  ')
+    expect(out).toBe('# 标题\n\n- 项目\n\n正文\n')
+  })
+  it('代码块补默认语言、不改代码内容', () => {
+    const out = cleanMarkdown('文字\n```\nconst a=1中文b\n```\n后文')
+    expect(out).toContain('```plaintext\nconst a=1中文b\n```')
+    expect(out).toMatch(/文字\n\n```/)
+  })
+  it('补全未闭合的代码块', () => expect(cleanMarkdown('```js\nlet a').trim().endsWith('```')).toBe(true))
+  it('可关闭中英文空格', () => expect(cleanMarkdown('用Vue', { cjkSpace: false })).toBe('用Vue\n'))
+})
+
+describe('小红书卡片拆分', () => {
+  it('H1 作为封面，按 ## 分页', () => {
+    const { cover, cards } = splitCards('# 大标题\n\n## 一\n内容一\n\n## 二\n内容二')
+    expect(cover).toBe('大标题')
+    expect(cards).toHaveLength(2)
+    expect(cards[1]).toContain('## 二')
+  })
+  it('手动分隔符优先', () => {
+    const { cards } = splitCards('a\n\n===\n\nb\n\n<!-- card -->\n\nc\n\n## d 同页')
+    expect(cards).toEqual(['a', 'b', 'c\n\n## d 同页'])
+  })
+  it('超长内容按字数自动分页', () => {
+    const para = '字'.repeat(150)
+    const { cards } = splitCards([para, para, para, para].join('\n\n'), { maxWeight: 260 })
+    expect(cards.length).toBeGreaterThanOrEqual(2)
+  })
+  it('代码块不会被拆开', () => {
+    const code = '```js\n' + Array.from({ length: 30 }, (_, i) => `line${i}`).join('\n') + '\n```'
+    const { cards } = splitCards('前言\n\n' + code)
+    expect(cards.some((c) => c.includes('line0') && c.includes('line29'))).toBe(true)
+  })
+  it('图片权重较高', () => expect(weight('![a](b.png)')).toBeGreaterThan(weight('短句')))
+})

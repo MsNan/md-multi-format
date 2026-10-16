@@ -1,0 +1,26 @@
+{
+  "name": "md-multi-format",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "highlight.js": "^11.12.0",
+    "html-to-image": "^1.11.13",
+    "jszip": "^3.10.2",
+    "markdown-it": "^15.0.3",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  },
+  "version": "0.1.0",
+  "description": "多平台 Markdown 排版：公众号内联样式、知乎富文本、掘金/CSDN 规范 Markdown、小红书 3:4 图文卡片 PNG",
+  "license": "MIT"
+}
