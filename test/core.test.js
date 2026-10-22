@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toWechat, toZhihu, toPreview, splitFrontMatter, highlightInline } from '../src/core/render.js'
+import { toWechat, toZhihu, toPreview, splitFrontMatter, highlightInline, preserveSpaces } from '../src/core/render.js'
 import { cleanMarkdown, spaceCjk } from '../src/core/clean.js'
 import { splitCards, weight } from '../src/core/cards.js'
 import { THEMES } from '../src/core/themes.js'
@@ -42,6 +42,23 @@ describe('公众号', () => {
     expect(h).toContain('&lt;b&gt;')
   })
   it('公众号文章链接保留为可点击', () => expect(toWechat('[看这](https://mp.weixin.qq.com/s/abc)')).toContain('<a href="https://mp.weixin.qq.com/s/abc"'))
+  it('代码行中间的连续空格也保留（对齐注释、ASCII 表格）', () => {
+    const h = toWechat('```plaintext\nx    = 1  # 对齐\n```')
+    expect(h).toContain('x&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;1&nbsp;&nbsp;#')
+    expect(preserveSpaces('<span style="color:#fff;">a  b</span>')).toBe('<span style="color:#fff;">a&nbsp;&nbsp;b</span>')
+  })
+  it('同一外链只编号一次', () => {
+    const h = toWechat('[文档](https://a.com/x) 和 [再看](https://a.com/x)，以及 [别的](https://b.com)')
+    expect(h.match(/\[1\]<\/sup>/g)).toHaveLength(2)
+    expect(h).toContain('[1] https://a.com/x<br/>[2] https://b.com')
+    expect(h).not.toContain('[3]')
+  })
+  it('正文直接写出的网址不重复加脚注', () => {
+    const h = toWechat('官网 https://b.com 和 <https://c.com>')
+    expect(h).toContain('https://b.com')
+    expect(h).not.toContain('参考链接')
+    expect(h).not.toContain('<sup')
+  })
   it('切换主题颜色', () => expect(toWechat('## 二级', 'orange')).toContain(THEMES.orange.colors.primary))
 })
 

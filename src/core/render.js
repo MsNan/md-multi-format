@@ -24,6 +24,11 @@ export function highlightInline(code, lang, palette) {
   })
 }
 
+/** 代码行里的空格和 Tab 转成 &nbsp;（只改文本，不动 <span style="..."> 标签内部） */
+export function preserveSpaces(line) {
+  return line.split(/(<[^>]*>)/).map((part, i) => (i % 2 ? part : part.replace(/\t/g, '    ').replace(/ /g, '&nbsp;'))).join('')
+}
+
 function createMd(themeKey, { inlineStyle, footnoteLinks }) {
   const theme = THEMES[themeKey] || THEMES.emerald
   const S = theme.styles
@@ -51,22 +56,32 @@ function createMd(themeKey, { inlineStyle, footnoteLinks }) {
     const lang = (t.info || '').trim().split(/\s+/)[0]
     const code = t.content.replace(/\n$/, '')
     if (!inlineStyle) return `<pre><code class="language-${escapeHtml(lang || 'plaintext')}">${escapeHtml(code)}</code></pre>\n`
-    // 公众号会吞掉代码里的换行和空格：换行转 <br>，行首空格转 &nbsp;
-    const body = highlightInline(code, lang, palette).split('\n').map((l) => l.replace(/^( +)/, (m) => '&nbsp;'.repeat(m.length)).replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')).join('<br/>')
+    // 公众号会吞掉代码里的换行和空格：换行转 <br>，空格（含行中连续空格，如对齐的注释/ASCII 表格）转 &nbsp;
+    const body = highlightInline(code, lang, palette).split('\n').map(preserveSpaces).join('<br/>')
     return `<pre${st('pre')}><code style="${S.preCode}white-space:nowrap;">${body}</code></pre>\n`
   }
   md.renderer.rules.code_block = md.renderer.rules.fence
 
   if (footnoteLinks) {
     // 公众号正文里的外链不能点击：把链接转成脚注，文末统一列出
+    // 同一个地址只编号一次；正文里直接写出的网址（linkify）本身就可读，不再加脚注
     md.renderer.rules.link_open = (tokens, idx, opts, env) => {
-      const href = tokens[idx].attrGet('href') || ''
+      const t = tokens[idx]
+      const href = t.attrGet('href') || ''
       env.links ||= []
-      if (/^https?:\/\/mp\.weixin\.qq\.com/.test(href)) { env.inlineLink = true; return `<a href="${escapeHtml(href)}"${st('a')}>` }
-      env.links.push(href); env.inlineLink = false
+      env.linkStack ||= []
+      if (/^https?:\/\/mp\.weixin\.qq\.com/.test(href)) { env.linkStack.push('a'); return `<a href="${escapeHtml(href)}"${st('a')}>` }
+      if (t.markup === 'linkify' || t.markup === 'autolink') { env.linkStack.push(''); return `<span${st('a')}>` }
+      let n = env.links.indexOf(href) + 1
+      if (!n) n = env.links.push(href)
+      env.linkStack.push(n)
       return `<span${st('a')}>`
     }
-    md.renderer.rules.link_close = (tokens, idx, opts, env) => (env.inlineLink ? '</a>' : `</span><sup style="color:${theme.colors.primary};font-size:12px;">[${env.links.length}]</sup>`)
+    md.renderer.rules.link_close = (tokens, idx, opts, env) => {
+      const n = env.linkStack.pop()
+      if (n === 'a') return '</a>'
+      return n ? `</span><sup style="color:${theme.colors.primary};font-size:12px;">[${n}]</sup>` : '</span>'
+    }
   } else if (inlineStyle) {
     md.renderer.rules.link_open = (tokens, idx, opts, env, self) => { tokens[idx].attrJoin('style', S.a); return self.renderToken(tokens, idx, opts) }
   }
