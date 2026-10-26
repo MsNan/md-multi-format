@@ -94,6 +94,26 @@ describe('掘金 / CSDN 规范化 Markdown', () => {
     expect(out).toMatch(/文字\n\n```/)
   })
   it('补全未闭合的代码块', () => expect(cleanMarkdown('```js\nlet a').trim().endsWith('```')).toBe(true))
+  it('代码块里的连续空行原样保留', () => {
+    const src = '```python\ndef a():\n    pass\n\n\ndef b():\n    pass\n```\n'
+    expect(cleanMarkdown(src)).toBe(src)
+  })
+  it('```js 不能关闭代码块，带反引号的行不算开头', () => {
+    const out = cleanMarkdown('```\n```js\nlet a=1\n```\n后文Vue')
+    expect(out).toBe('```plaintext\n```js\nlet a=1\n```\n\n后文 Vue\n')
+    expect(cleanMarkdown('```js` 不是围栏')).toBe('```js` 不是围栏\n')
+  })
+  it('分隔线、#话题、硬换行、缩进代码、HTML 属性不被改坏', () => {
+    expect(cleanMarkdown('上文\n\n* * *\n\n下文')).toBe('上文\n\n* * *\n\n下文\n')
+    expect(cleanMarkdown('#Vue3 #前端')).toBe('#Vue3 #前端\n')
+    expect(cleanMarkdown('第一行  \n第二行')).toBe('第一行  \n第二行\n')
+    expect(cleanMarkdown('段落\n\n    s="中文a"')).toBe('段落\n\n    s="中文a"\n')
+    expect(cleanMarkdown('<img src="图a.png">')).toBe('<img src="图a.png">\n')
+  })
+  it('列表里缩进的代码块照样识别', () => {
+    const src = '- 第一步\n\n    ```bash\n    npm i中文a\n\n\n    ```\n'
+    expect(cleanMarkdown(src)).toBe(src)
+  })
   it('可关闭中英文空格', () => expect(cleanMarkdown('用Vue', { cjkSpace: false })).toBe('用Vue\n'))
 })
 
