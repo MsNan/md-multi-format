@@ -41,10 +41,19 @@ function createMd(themeKey, { inlineStyle, footnoteLinks }) {
     md.renderer.rules[rule] = (tokens, idx, opts, env, self) => {
       const t = tokens[idx]
       const k = key || t.tag
-      if (inlineStyle && S[k]) t.attrJoin('style', S[k])
-      return self.renderToken(tokens, idx, opts)
+      // 主题样式放前面，markdown-it 自带的样式（表格对齐 text-align:center/right）放后面覆盖；
+      // 不能用 attrJoin，它用空格拼接，会得到 "text-align:right border:..." 这种无效声明，连边框一起丢掉
+      if (inlineStyle && S[k]) {
+        const own = (t.attrGet('style') || '').trim()
+        t.attrSet('style', S[k] + (own ? own.replace(/;?$/, ';') : ''))
+      }
+      const out = self.renderToken(tokens, idx, opts)
+      // 手机上宽表格会被挤成一字一行：外面包一层可横向滚动的 section（公众号保留 section 的 overflow 样式）
+      if (inlineStyle && rule === 'table_open') return `<section style="${S.tableWrap}">` + out
+      return out
     }
   }
+  if (inlineStyle) md.renderer.rules.table_close = (tokens, idx, opts, env, self) => self.renderToken(tokens, idx, opts).replace(/\n$/, '') + '</section>\n'
   md.renderer.rules.hr = () => `<hr${st('hr')} />`
   md.renderer.rules.code_inline = (tokens, idx) => `<code${st('code')}>${escapeHtml(tokens[idx].content)}</code>`
   md.renderer.rules.image = (tokens, idx) => {

@@ -140,3 +140,28 @@ describe('小红书卡片拆分', () => {
   })
   it('图片权重较高', () => expect(weight('![a](b.png)')).toBeGreaterThan(weight('短句')))
 })
+
+describe('表格', () => {
+  const md = '| 左 | 中 | 右 |\n|---|:-:|--:|\n| a | b | c |'
+  it('对齐列的样式不被拼坏：边框保留，对齐方式覆盖主题默认的左对齐', () => {
+    const h = toWechat(md)
+    expect(h).not.toMatch(/text-align:(center|right) border/)
+    const cells = h.match(/<t[hd] style="[^"]*"/g)
+    expect(cells).toHaveLength(6)
+    for (const c of cells) expect(c).toContain('border:1px solid')
+    expect(h).toMatch(/<th style="[^"]*text-align:left;[^"]*text-align:center;?"/)
+    expect(h).toMatch(/<td style="[^"]*text-align:right;?">c<\/td>/)
+  })
+  it('公众号/预览里宽表格外层可横向滚动，单元格不被挤成一字一行', () => {
+    for (const h of [toWechat(md), toPreview(md)]) {
+      expect(h).toMatch(/<section style="[^"]*overflow-x:auto[^"]*"><table/)
+      expect(h).toContain('</table></section>')
+      expect(h).toMatch(/<table style="[^"]*min-width:100%/)
+    }
+  })
+  it('知乎保持干净 HTML，不包滚动层', () => {
+    const h = toZhihu(md)
+    expect(h).not.toContain('overflow-x')
+    expect(h).toContain('<table>')
+  })
+})

@@ -18,9 +18,10 @@ const base = (c) => ({
   li: `margin:6px 0;`,
   img: `max-width:100%;border-radius:6px;display:block;margin:16px auto;`,
   hr: `border:none;border-top:1px dashed ${c.border};margin:24px 0;`,
-  table: `border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;`,
-  th: `border:1px solid ${c.border};padding:8px 10px;background:${c.soft};font-weight:700;text-align:left;`,
-  td: `border:1px solid ${c.border};padding:8px 10px;`,
+  tableWrap: `max-width:100%;overflow-x:auto;margin:16px 0;`,
+  table: `border-collapse:collapse;min-width:100%;margin:0;font-size:14px;word-break:normal;`,
+  th: `border:1px solid ${c.border};padding:8px 10px;background:${c.soft};font-weight:700;text-align:left;white-space:nowrap;`,
+  td: `border:1px solid ${c.border};padding:8px 10px;min-width:3em;`,
   footnote: `font-size:13px;color:${c.muted};`,
 })
 
