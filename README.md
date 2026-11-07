@@ -6,7 +6,7 @@
 
 [在线使用](https://msnan.github.io/md-multi-format/) · 纯本地运行，文章不会上传到任何服务器
 
-![license](https://img.shields.io/badge/license-MIT-green) ![vue](https://img.shields.io/badge/Vue-3-42b883) ![tests](https://img.shields.io/badge/tests-23%20passed-brightgreen)
+![license](https://img.shields.io/badge/license-MIT-green) ![vue](https://img.shields.io/badge/Vue-3-42b883) ![tests](https://img.shields.io/badge/tests-45%20passed-brightgreen)
 
 </div>
 
@@ -43,6 +43,7 @@
 - **代码高亮**：基于 highlight.js，转成内联颜色，公众号里也能显示高亮
 - **草稿自动保存**：保存在浏览器本地（localStorage），刷新页面不会丢失
 - **深色模式**，手机上可以在「编辑 / 预览」之间切换
+- **发布前检查**：本地确定性规则提示标题党、绝对化用语、篇幅过短、外链过多、引流话术（不联网、无敏感词大库；仅为提示，不代替平台审核，也不拦截复制）
 - **只做排版，不做自动发布**：不需要登录任何平台，也不会读取 Cookie，不存在封号风险
 - 输入的 HTML 会被转义，避免粘贴内容中的脚本被执行
 
@@ -72,9 +73,10 @@ npm run build   # 构建静态站点
 | `render.js` | Markdown 渲染：公众号（内联样式 + 脚注）、知乎、预览 |
 | `themes.js` | 排版主题和代码高亮配色 |
 | `clean.js` | 掘金 / CSDN 的 Markdown 规范化 |
+| `precheck.js` | 发布前轻量检查（标题党 / 外链 / 引流等提示） |
 | `cards.js` | 小红书卡片拆分算法 |
 
-推送到 `main` 分支后，GitHub Actions 会先跑测试，再自动部署到 GitHub Pages。
+推送或 PR 到 `main` 时，独立的 Test 工作流会在 Node 20/22 上跑单元测试；Deploy 工作流仍会在构建前再跑一遍测试，然后发布到 GitHub Pages。
 
 ## 相关项目
 

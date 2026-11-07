@@ -46,6 +46,16 @@
           <div v-else-if="tab === 'zhihu'" class="paper zhihu" v-html="zhihuHtml" />
           <pre v-else-if="tab === 'juejin'" class="paper md-out">{{ cleanMd }}</pre>
           <XhsCards v-else ref="cardsRef" :markdown="text" :theme="theme" :card-style="cardStyle" :author="author" />
+          <div v-if="precheck.issues.length" class="precheck" role="status">
+            <div class="precheck-title">发布前检查 <span class="muted">仅提示，不拦截复制</span></div>
+            <ul>
+              <li v-for="(iss, i) in precheck.issues" :key="i" :class="iss.level">
+                <span class="tag">{{ iss.level === 'error' ? '问题' : '注意' }}</span>
+                {{ iss.message }}
+                <span v-if="iss.detail" class="detail">（{{ iss.detail }}）</span>
+              </li>
+            </ul>
+          </div>
           <p class="hint">{{ current.hint }}</p>
         </div>
       </section>
@@ -77,6 +87,7 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { THEMES } from './core/themes.js'
 import { toWechat, toZhihu } from './core/render.js'
 import { cleanMarkdown } from './core/clean.js'
+import { precheckMarkdown, extractFirstH1 } from './core/precheck.js'
 import { copyRich, copyPlain } from './clipboard.js'
 import { SAMPLE } from './sample.js'
 import XhsCards, { CARD_STYLES } from './components/XhsCards.vue'
@@ -103,6 +114,11 @@ watch([tab, theme, cardStyle, author], () => { localStorage.setItem('mmf-tab', t
 const wechatHtml = computed(() => toWechat(text.value, theme.value))
 const zhihuHtml = computed(() => toZhihu(text.value))
 const cleanMd = computed(() => cleanMarkdown(text.value))
+const precheckPlatform = computed(() => (tab.value === 'juejin' ? 'juejin' : tab.value))
+const precheck = computed(() => precheckMarkdown(text.value, {
+  title: extractFirstH1(text.value) || undefined,
+  platform: precheckPlatform.value,
+}))
 
 const copied = ref(false)
 async function copy() {
@@ -160,6 +176,16 @@ html.dark .phone, html.dark .paper { box-shadow: none; }
 .modal-box h2 { margin-top: 0; }
 .qrs { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
 .qrs figure { margin: 0; } .qrs img { width: 200px; max-width: 70vw; border-radius: 10px; } .qrs figcaption { color: var(--muted); }
+.precheck { max-width: 720px; margin: 12px auto 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); border: 1px solid var(--border); font-size: 12px; }
+.precheck-title { font-weight: 600; margin-bottom: 6px; }
+.precheck ul { margin: 0; padding-left: 0; list-style: none; }
+.precheck li { margin: 4px 0; line-height: 1.5; color: var(--text); }
+.precheck li .tag { display: inline-block; min-width: 2em; margin-right: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; }
+.precheck li.warn .tag { background: #fef3c7; color: #92400e; }
+.precheck li.error .tag { background: #fee2e2; color: #991b1b; }
+.precheck .detail { color: var(--muted); }
+html.dark .precheck li.warn .tag { background: #422006; color: #fcd34d; }
+html.dark .precheck li.error .tag { background: #450a0a; color: #fca5a5; }
 @media (max-width: 860px) {
   .main { grid-template-columns: 1fr; }
   .mobile-switch { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); }
